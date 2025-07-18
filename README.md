@@ -1,58 +1,41 @@
-# Kelsy Chatbot
+# Kelsy - Your Personal AI Assistant
 
-Kelsy is a sleek, modern AI chatbot designed to provide helpful and concise responses. Built with a focus on user experience and responsiveness, Kelsy leverages the Gemini API to offer a conversational interface that adapts seamlessly across various devices.
+Kelsy is an advanced, interactive AI chat application designed to provide a seamless and visually engaging conversational experience. Built with modern web technologies, Kelsy offers a blend of intelligent responses and dynamic aesthetics.
 
 ## Features
 
-* **AI-Powered Responses:** Utilizes the Gemini API for intelligent and context-aware conversations.
-* **Real-time Typing Effect:** Bot responses are displayed with a dynamic typing animation for a more engaging interaction.
-* **Code Highlighting:** Automatically highlights code snippets in bot responses for improved readability.
-* **Copy to Clipboard:** Easily copy bot responses, especially code blocks, with a dedicated copy button.
-* **Responsive Design:** Optimized for a consistent and pleasant user experience on desktops, laptops, tablets, and mobile phones.
-* **Interactive Background:** Features a subtle, animated 3D background powered by Three.js.
-* **Stop Generation:** Ability to halt ongoing AI response generation.
+* **Dynamic Theming:** The application's interface features an animated, evolving color theme that provides a fresh and vibrant look.
+* **Intelligent Conversations:** Powered by the Gemini API, Kelsy delivers helpful and witty responses, formatted beautifully with Markdown for enhanced readability.
+* **Voice Interaction:** Utilize the speaker icon to have Kelsy read responses aloud. You can select your preferred voice from a curated list of popular options in the settings.
+* **Local Chat History:** Your conversations are automatically saved locally in your browser's storage. You can easily switch between different chat sessions, and the application intelligently names them based on your first message.
+* **Automatic Chat Pruning:** To keep your browser storage efficient, older, unused conversations are automatically deleted if the total number exceeds a set limit (defaulting to 10).
+* **File Uploads:** Attach images, audio, or video files to your messages for richer interactions with the AI.
+* **Export Chat:** Export your entire conversation history as a Markdown file for easy sharing or archiving.
+* **Clean UI:** A minimalist design with hidden scrollbars ensures an uncluttered and immersive chat experience.
 
 ## Setup and Usage
 
-To run Kelsy locally, follow these simple steps:
+To run Kelsy locally or deploy it:
 
-1.  **Clone the repository (or download the `index.html` file):**
-    If you've pushed your project to GitHub, you can clone it:
-    ```bash
-    git clone [https://github.com/ApexUrke/Kelsy.git](https://github.com/ApexUrke/Kelsy.git)
-    cd Kelsy
-    ```
-    Alternatively, if you only have the `index.html` file, ensure it's in a dedicated folder.
+1.  **Obtain a Gemini API Key:**
+    * Go to the [Google Cloud Console](https://console.cloud.google.com/).
+    * Create a new project (e.g., "Kelsy AI").
+    * Navigate to "APIs & Services" > "Library".
+    * Search for and **enable** the "Generative Language API".
+    * Go to "APIs & Services" > "Credentials".
+    * Click "Create credentials" and select "API key".
+    * **Copy the generated API key.**
+    * **(Highly Recommended for Security):** Edit the newly created API key. Under "Application restrictions," select "HTTP referrers (web sites)" and add your website's domain (e.g., `*.yourdomain.com/*`). Under "API restrictions," select "Restrict key" and choose "Generative Language API" from the dropdown. Save your changes.
 
-2.  **Open `index.html`:**
-    Simply open the `index.html` file in your preferred web browser. You can do this by double-clicking the file, or by right-clicking and selecting "Open with" and choosing your browser.
+2.  **Insert API Key:**
+    * Open the `index.html` file.
+    * Locate the line `const GEMINI_API_KEY = "YOUR_API_KEY_HERE";`
+    * Replace `"YOUR_API_KEY_HERE"` with the API key you obtained from the Google Cloud Console.
 
-    The chatbot interface will load, and you can start interacting with Kelsy immediately.
-
-### Gemini API Key
-
-This project uses the Gemini API. Your personal API key is embedded directly in the `index.html` file for convenience. If you ever need to update or replace it, locate the `GEMINI_API_KEY` constant in the JavaScript section of `index.html`.
-
-**Note:** While convenient for local development and personal use, for public deployments or collaborative projects, it's generally recommended to use more secure methods for handling API keys (e.g., server-side proxies or environment variables).
-
-## Technologies Used
-
-* **HTML5:** Structure of the web page.
-* **CSS3:** Styling and responsive design.
-* **JavaScript (ES6+):** Core logic, API integration, and DOM manipulation.
-* **Google Gemini API:** For AI conversational capabilities.
-* **Three.js:** For the interactive 3D background animation.
-* **Marked.js:** For parsing Markdown content in bot responses.
-* **Highlight.js:** For syntax highlighting of code blocks.
-* **Font Awesome:** For icons.
-* **Google Fonts (Poppins):** For typography.
+3.  **Run the Application:**
+    * You can open the `index.html` file directly in your web browser, or deploy it to a web server (like Netlify, Vercel, GitHub Pages, etc.).
 
 ## Credits
 
-* **Urke (ApexUrke):** Original developer and creator of Kelsy.
-* **Google Gemini API:** Powering the AI intelligence.
-* **Three.js, Marked.js, Highlight.js, Font Awesome:** Open-source libraries that enhance the project.
-
-## License
-
-This project is open-source and available under the [MIT License](LICENSE).
+Kelsy was created by ApexUrke.
+Portfolio: [https://urke.netlify.app/](https://urke.netlify.app/)
