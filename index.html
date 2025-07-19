@@ -252,6 +252,15 @@
                 display: none;
             }
         }
+        .dot {
+            width: 2px;
+            height: 2px;
+            border-radius: 50%;
+            background-color: currentColor;
+            animation: pulse 1.5s infinite;
+        }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
     </style>
 </head>
 <body>
@@ -265,7 +274,7 @@
         <p class="text-md text-stone-400">Please access this website from a PC for the best experience.</p>
     </div>
 
-    <div class="chat-container">
+    <main class="chat-container">
         <div class="chat-header flex-shrink-0 flex justify-between items-center p-4 border-b" style="border-color: var(--glow-color-light);">
             <h1 id="kelsy-title" class="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text" style="background-image: linear-gradient(45deg, var(--kelsy-gradient-start), var(--kelsy-gradient-via), var(--kelsy-gradient-end)); text-shadow: 0 0 15px var(--glow-color-light);">Kelsy</h1>
             <div class="flex items-center gap-2">
@@ -297,7 +306,7 @@
                 </button>
             </div>
         </div>
-    </div>
+    </main>
 
     <div id="menu-modal" class="modal-overlay fixed inset-0 hidden items-center justify-center z-50">
         <div class="modal p-6 sm:p-8 rounded-2xl w-11/12 max-w-md" style="background-color: var(--light-bg); border: 1px solid var(--glow-color-light);">
@@ -324,647 +333,649 @@
     <div id="toast-notification" class="fixed bottom-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg opacity-0 transition-all duration-300 z-50"></div>
 
     <script>
-        const UIElements = {
-            chatMessages: document.getElementById('chat-messages'),
-            messageInput: document.getElementById('message-input'),
-            sendButton: document.getElementById('send-button'),
-            stopButton: document.getElementById('stop-button'),
-            micButton: document.getElementById('mic-btn'),
-            menuButton: document.getElementById('menu-button'),
-            menuModal: document.getElementById('menu-modal'),
-            newChatButton: document.getElementById('new-chat-button'),
-            exportChatButton: document.getElementById('export-chat-button'),
-            closeMenuButton: document.getElementById('close-menu-button'),
-            fileUploadInput: document.getElementById('file-upload-input'),
-            filePreviewArea: document.getElementById('file-preview-area'),
-            promptStartersContainer: document.getElementById('prompt-starters-container'),
-            toastNotification: document.getElementById('toast-notification'),
-            voiceSelect: document.getElementById('voice-select'),
-            kelsyTitle: document.getElementById('kelsy-title'),
-            chatListContainer: document.getElementById('chat-list'),
-            mobileBlockOverlay: document.getElementById('mobile-block-overlay'),
-        };
+        (function() {
+            const UIElements = {
+                chatMessages: document.getElementById('chat-messages'),
+                messageInput: document.getElementById('message-input'),
+                sendButton: document.getElementById('send-button'),
+                stopButton: document.getElementById('stop-button'),
+                micButton: document.getElementById('mic-btn'),
+                menuButton: document.getElementById('menu-button'),
+                menuModal: document.getElementById('menu-modal'),
+                newChatButton: document.getElementById('new-chat-button'),
+                exportChatButton: document.getElementById('export-chat-button'),
+                closeMenuButton: document.getElementById('close-menu-button'),
+                fileUploadInput: document.getElementById('file-upload-input'),
+                filePreviewArea: document.getElementById('file-preview-area'),
+                promptStartersContainer: document.getElementById('prompt-starters-container'),
+                toastNotification: document.getElementById('toast-notification'),
+                voiceSelect: document.getElementById('voice-select'),
+                kelsyTitle: document.getElementById('kelsy-title'),
+                chatListContainer: document.getElementById('chat-list'),
+                mobileBlockOverlay: document.getElementById('mobile-block-overlay'),
+            };
 
-        const MAX_SAVED_CHATS = 10;
-        let chatSessions = [];
-        let currentChatId = null;
-        let uploadedFiles = [];
-        let abortController = null;
-        let mediaRecorder = null;
-        let audioChunks = [];
-        let selectedVoice = null;
-        let isSpeakingCanceled = false;
-        const GEMINI_API_KEY = "AIzaSyDM1lvYF1-I2nVqeMYobmcRDSF1lZ8wEpQ";
+            const MAX_SAVED_CHATS = 10;
+            let chatSessions = [];
+            let currentChatId = null;
+            let uploadedFiles = [];
+            let abortController = null;
+            let mediaRecorder = null;
+            let audioChunks = [];
+            let selectedVoice = null;
+            let isSpeakingCanceled = false;
+            const GEMINI_API_KEY = "AIzaSyDM1lvYF1-I2nVqeMYobmcRDSF1lZ8wEpQ";
 
-        const systemInstruction = {
-            role: "model",
-            parts: [{ text: "You are Kelsy, a helpful and witty AI assistant. You must state that you were created by a developer known as ApexUrke if asked who made you and provide his portfolio website: https://urke.netlify.app/. You must never mention Google or that you are a Google model. Your purpose is to be as helpful as possible. Use a rich vocabulary and vary your sentence structure. Format your responses creatively and clearly using Markdown: utilize headings, bold and italic text, lists, and tables to enhance readability. Always provide code blocks with the correct language identifier." }]
-        };
+            const systemInstruction = {
+                role: "model",
+                parts: [{ text: "You are Kelsy, a helpful and witty AI assistant. You must state that you were created by a developer known as ApexUrke if asked who made you and provide his portfolio website: https://urke.netlify.app/. You must never mention Google or that you are a Google model. Your purpose is to be as helpful as possible. Use a rich vocabulary and vary your sentence structure. Format your responses creatively and clearly using Markdown: utilize headings, bold and italic text, lists, and tables to enhance readability. Always provide code blocks with the correct language identifier." }]
+            };
 
-        const loadChatSessions = () => {
-            try {
-                const savedSessions = localStorage.getItem('kelsy_chat_sessions_v1');
-                if (savedSessions) {
-                    chatSessions = JSON.parse(savedSessions);
-                    chatSessions.sort((a, b) => b.lastUsed - a.lastUsed);
-                } else {
+            const loadChatSessions = () => {
+                try {
+                    const savedSessions = localStorage.getItem('kelsy_chat_sessions_v1');
+                    if (savedSessions) {
+                        chatSessions = JSON.parse(savedSessions);
+                        chatSessions.sort((a, b) => b.lastUsed - a.lastUsed);
+                    } else {
+                        chatSessions = [];
+                    }
+                    if (chatSessions.length === 0) {
+                        startNewChat(false);
+                    } else {
+                        switchChat(chatSessions[0].id);
+                    }
+                } catch (e) {
+                    showToast("Failed to load chat sessions. Starting fresh.", true);
                     chatSessions = [];
-                }
-                if (chatSessions.length === 0) {
                     startNewChat(false);
-                } else {
-                    switchChat(chatSessions[0].id);
                 }
-            } catch (e) {
-                showToast("Failed to load chat sessions. Starting fresh.", true);
-                chatSessions = [];
-                startNewChat(false);
-            }
-            renderChatList();
-        };
+                renderChatList();
+            };
 
-        const saveChatSessions = () => {
-            try {
-                const currentChatIndex = chatSessions.findIndex(chat => chat.id === currentChatId);
-                if (currentChatIndex !== -1) {
-                    chatSessions[currentChatIndex].history = chatHistory;
-                    chatSessions[currentChatIndex].lastUsed = Date.now();
-                    if (chatSessions[currentChatIndex].name === "New Chat" && chatHistory.length > 1) {
-                        const firstUserMessage = chatHistory.find(msg => msg.role === 'user' && msg.parts[0]?.text);
-                        if (firstUserMessage) {
-                            chatSessions[currentChatIndex].name = firstUserMessage.parts[0].text.substring(0, 30) + (firstUserMessage.parts[0].text.length > 30 ? '...' : '');
+            const saveChatSessions = () => {
+                try {
+                    const currentChatIndex = chatSessions.findIndex(chat => chat.id === currentChatId);
+                    if (currentChatIndex !== -1) {
+                        chatSessions[currentChatIndex].history = chatHistory;
+                        chatSessions[currentChatIndex].lastUsed = Date.now();
+                        if (chatSessions[currentChatIndex].name === "New Chat" && chatHistory.length > 1) {
+                            const firstUserMessage = chatHistory.find(msg => msg.role === 'user' && msg.parts[0]?.text);
+                            if (firstUserMessage) {
+                                chatSessions[currentChatIndex].name = firstUserMessage.parts[0].text.substring(0, 30) + (firstUserMessage.parts[0].text.length > 30 ? '...' : '');
+                            }
                         }
                     }
+
+                    if (chatSessions.length > MAX_SAVED_CHATS) {
+                        chatSessions.sort((a, b) => b.lastUsed - a.lastUsed);
+                        chatSessions = chatSessions.slice(0, MAX_SAVED_CHATS);
+                    }
+                    localStorage.setItem('kelsy_chat_sessions_v1', JSON.stringify(chatSessions));
+                } catch (e) {
+                    showToast("Failed to save chat sessions.", true);
                 }
-
-                if (chatSessions.length > MAX_SAVED_CHATS) {
-                    chatSessions.sort((a, b) => b.lastUsed - a.lastUsed);
-                    chatSessions = chatSessions.slice(0, MAX_SAVED_CHATS);
+                renderChatList();
+            };
+            
+            const deleteMessage = (messageId) => {
+                chatHistory = chatHistory.filter(msg => msg.id !== messageId);
+                saveChatSessions();
+                const messageEl = document.querySelector(`[data-id='${messageId}']`);
+                if (messageEl) {
+                    messageEl.style.animation = 'fadeOut 0.3s ease forwards';
+                    setTimeout(() => messageEl.remove(), 300);
                 }
-                localStorage.setItem('kelsy_chat_sessions_v1', JSON.stringify(chatSessions));
-            } catch (e) {
-                showToast("Failed to save chat sessions.", true);
-            }
-            renderChatList();
-        };
-        
-        const deleteMessage = (messageId) => {
-            chatHistory = chatHistory.filter(msg => msg.id !== messageId);
-            saveChatSessions();
-            const messageEl = document.querySelector(`[data-id='${messageId}']`);
-            if (messageEl) {
-                messageEl.style.animation = 'fadeOut 0.3s ease forwards';
-                setTimeout(() => messageEl.remove(), 300);
-            }
-            if (chatHistory.length <= 1) displayPromptStarters();
-        };
+                if (chatHistory.length <= 1) displayPromptStarters();
+            };
 
-        const startNewChat = (confirmUser = true) => {
-            if (confirmUser) {
-                showToast("New chat started. Previous conversation cleared.", false);
-            }
-            speechSynthesis.cancel();
-            const newChatId = Date.now().toString();
-            const initialBotMessage = { role: 'model', parts: [{ text: 'Hello! I am Kelsy, an advanced AI assistant created by ApexUrke. How may I assist you today?' }], id: Date.now() };
-            
-            chatHistory = [initialBotMessage];
-            currentChatId = newChatId;
-            chatSessions.unshift({
-                id: newChatId,
-                name: "New Chat",
-                lastUsed: Date.now(),
-                history: chatHistory
-            });
-            
-            saveChatSessions();
-            UIElements.chatMessages.innerHTML = '';
-            appendMessage(initialBotMessage.role, initialBotMessage.parts[0].text, false, initialBotMessage.id);
-            displayPromptStarters();
-            UIElements.menuModal.style.display = 'none';
-            scrollToBottom(true);
-            renderChatList();
-        };
-
-        const switchChat = (chatId) => {
-            saveChatSessions();
-            const chatToLoad = chatSessions.find(chat => chat.id === chatId);
-            if (chatToLoad) {
-                currentChatId = chatToLoad.id;
-                chatHistory = chatToLoad.history;
-                chatToLoad.lastUsed = Date.now();
-
-                UIElements.chatMessages.innerHTML = '';
-                chatHistory.forEach(msg => appendMessage(msg.role, msg.parts[0].text, true, msg.id));
-                if (chatHistory.length > 1) hidePromptStarters();
-                else displayPromptStarters();
+            const startNewChat = (confirmUser = true) => {
+                if (confirmUser) {
+                    showToast("New chat started. Previous conversation cleared.", false);
+                }
+                speechSynthesis.cancel();
+                const newChatId = Date.now().toString();
+                const initialBotMessage = { role: 'model', parts: [{ text: 'Hello! I am Kelsy, an advanced AI assistant created by ApexUrke. How may I assist you today?' }], id: Date.now() };
                 
-                showToast(`Switched to chat: "${chatToLoad.name}"`, false);
+                chatHistory = [initialBotMessage];
+                currentChatId = newChatId;
+                chatSessions.unshift({
+                    id: newChatId,
+                    name: "New Chat",
+                    lastUsed: Date.now(),
+                    history: chatHistory
+                });
+                
+                saveChatSessions();
+                UIElements.chatMessages.innerHTML = '';
+                appendMessage(initialBotMessage.role, initialBotMessage.parts[0].text, false, initialBotMessage.id);
+                displayPromptStarters();
                 UIElements.menuModal.style.display = 'none';
                 scrollToBottom(true);
                 renderChatList();
-            } else {
-                showToast("Chat not found.", true);
-            }
-        };
-
-        const deleteChatSession = (chatId) => {
-            const chatToDeleteIndex = chatSessions.findIndex(chat => chat.id === chatId);
-            if (chatToDeleteIndex !== -1) {
-                const deletedChatName = chatSessions[chatToDeleteIndex].name;
-                chatSessions.splice(chatToDeleteIndex, 1);
-                saveChatSessions();
-                showToast(`Chat "${deletedChatName}" deleted.`, false);
-                if (currentChatId === chatId) {
-                    startNewChat(false);
-                } else {
-                    renderChatList();
-                }
-            }
-        };
-
-        const renderChatList = () => {
-            UIElements.chatListContainer.innerHTML = '';
-            chatSessions.sort((a, b) => b.lastUsed - a.lastUsed);
-            chatSessions.forEach(chat => {
-                const chatItem = document.createElement('div');
-                chatItem.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
-                chatItem.innerHTML = `<span class="chat-item-title">${chat.name}</span><button class="chat-item-delete" data-id="${chat.id}"><i class="fas fa-times"></i></button>`;
-                chatItem.onclick = (e) => {
-                    if (!e.target.closest('.chat-item-delete')) {
-                        switchChat(chat.id);
-                    }
-                };
-                chatItem.querySelector('.chat-item-delete').onclick = (e) => {
-                    e.stopPropagation();
-                    deleteChatSession(chat.id);
-                };
-                UIElements.chatListContainer.appendChild(chatItem);
-            });
-        };
-
-        const setUiLoading = (isLoading) => {
-            UIElements.messageInput.disabled = isLoading;
-            UIElements.sendButton.disabled = isLoading;
-            UIElements.fileUploadInput.disabled = isLoading;
-            UIElements.micButton.disabled = isLoading;
-            UIElements.sendButton.classList.toggle('hidden', isLoading);
-            UIElements.stopButton.classList.toggle('hidden', !isLoading);
-        };
-
-        const sendMessage = async () => {
-            const messageText = UIElements.messageInput.value.trim();
-            if ((messageText === '' && uploadedFiles.length === 0) || UIElements.sendButton.disabled) return;
-            
-            if (!GEMINI_API_KEY) {
-                showToast("API Key is missing. Please ensure it's set up correctly.", true);
-                return;
-            }
-
-            hidePromptStarters();
-            setUiLoading(true);
-            abortController = new AbortController();
-            speechSynthesis.cancel();
-
-            const userParts = [];
-            if (messageText) userParts.push({ text: messageText });
-            uploadedFiles.forEach(file => userParts.push({ inline_data: { mime_type: file.type, data: file.base64 } }));
-
-            const userMessageForHistory = { role: "user", parts: userParts, id: Date.now() };
-            const userMessageForApi = { role: "user", parts: userParts };
-            appendMessage(userMessageForHistory.role, messageText || `[${uploadedFiles.length} file(s) attached]`, false, userMessageForHistory.id);
-            
-            const apiHistory = chatHistory.map(({ role, parts }) => ({ role, parts }));
-            const payload = { 
-                contents: [systemInstruction, ...apiHistory, userMessageForApi] 
             };
-            
-            UIElements.messageInput.value = '';
-            clearFileUploads();
 
-            let botMessageDiv, fullResponse = '';
-            const botMessageId = Date.now();
-            
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:streamGenerateContent?key=${GEMINI_API_KEY}&alt=sse`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                    signal: abortController.signal
-                });
+            const switchChat = (chatId) => {
+                saveChatSessions();
+                const chatToLoad = chatSessions.find(chat => chat.id === chatId);
+                if (chatToLoad) {
+                    currentChatId = chatToLoad.id;
+                    chatHistory = chatToLoad.history;
+                    chatToLoad.lastUsed = Date.now();
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
-                }
-                
-                botMessageDiv = appendMessage('model', '', false, botMessageId, true);
-                const textContentDiv = botMessageDiv.querySelector('.text-content');
-                
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+                    UIElements.chatMessages.innerHTML = '';
+                    chatHistory.forEach(msg => appendMessage(msg.role, msg.parts[0].text, true, msg.id));
+                    if (chatHistory.length > 1) hidePromptStarters();
+                    else displayPromptStarters();
                     
-                    const lines = decoder.decode(value, { stream: true }).split('\n');
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const chunk = JSON.parse(line.substring(6));
-                                const textChunk = chunk.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                                if (textChunk) {
-                                    fullResponse += textChunk;
-                                    textContentDiv.innerHTML = marked.parse(fullResponse);
-                                    scrollToBottom();
-                                }
-                            } catch (e) {}
-                        }
-                    }
+                    showToast(`Switched to chat: "${chatToLoad.name}"`, false);
+                    UIElements.menuModal.style.display = 'none';
+                    scrollToBottom(true);
+                    renderChatList();
+                } else {
+                    showToast("Chat not found.", true);
                 }
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    fullResponse = `Error: ${error.message}. Please try again.`;
-                    if (botMessageDiv) {
-                        botMessageDiv.querySelector('.text-content').innerHTML = marked.parse(fullResponse);
+            };
+
+            const deleteChatSession = (chatId) => {
+                const chatToDeleteIndex = chatSessions.findIndex(chat => chat.id === chatId);
+                if (chatToDeleteIndex !== -1) {
+                    const deletedChatName = chatSessions[chatToDeleteIndex].name;
+                    chatSessions.splice(chatToDeleteIndex, 1);
+                    saveChatSessions();
+                    showToast(`Chat "${deletedChatName}" deleted.`, false);
+                    if (currentChatId === chatId) {
+                        startNewChat(false);
                     } else {
-                        appendMessage('model', fullResponse, false, botMessageId);
+                        renderChatList();
                     }
-                    showToast(`AI Error: ${error.message}`, true);
-                } else {
-                    fullResponse += "\n\n*(Generation stopped by user)*";
-                    if (botMessageDiv) botMessageDiv.querySelector('.text-content').innerHTML = marked.parse(fullResponse);
-                    showToast("AI generation stopped.", false);
                 }
-            } finally {
-                chatHistory.push(userMessageForHistory);
-                if (fullResponse.trim()) {
-                    const botMessage = { role: "model", parts: [{ text: fullResponse }], id: botMessageId };
-                    chatHistory.push(botMessage);
-                    if (botMessageDiv) {
-                        addActionsToBotMessage(botMessageDiv.querySelector('.flex.flex-col'), fullResponse);
-                        highlightCode(botMessageDiv);
-                    }
-                } else {
-                    botMessageDiv?.remove();
-                }
-                saveChatSessions();
-                setUiLoading(false);
-                abortController = null;
-                UIElements.messageInput.focus();
-            }
-        };
-        
-        const appendMessage = (sender, text, isHistory = false, messageId, streaming = false) => {
-            const messageWrapper = document.createElement('div');
-            messageWrapper.className = `message ${sender === 'user' ? 'user' : 'bot'} flex items-start gap-3 max-w-2xl ${sender === 'user' ? 'self-end flex-row-reverse' : 'self-start'}`;
-            messageWrapper.dataset.id = messageId;
-            
-            const avatar = `<div class="avatar w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0"><i class="fas ${sender === 'user' ? 'fa-user-astronaut' : 'fa-robot'}"></i></div>`;
-            
-            const contentWrapper = document.createElement('div');
-            contentWrapper.className = 'flex flex-col gap-2 items-start w-full';
-            
-            const textContentDiv = document.createElement('div');
-            textContentDiv.className = `text-content p-4 rounded-2xl ${sender === 'user' ? 'rounded-br-none' : 'rounded-bl-none'}`;
-            
-            textContentDiv.innerHTML = streaming ? '<div class="flex items-center gap-1.5"><div class="dot w-2 h-2 rounded-full bg-current animate-pulse"></div><div class="dot w-2 h-2 rounded-full bg-current animate-pulse" style="animation-delay: 0.2s;"></div><div class="dot w-2 h-2 rounded-full bg-current animate-pulse" style="animation-delay: 0.4s;"></div></div>' : marked.parse(text);
-            
-            contentWrapper.appendChild(textContentDiv);
-            messageWrapper.innerHTML = avatar;
-            messageWrapper.appendChild(contentWrapper);
-            
-            if (sender === 'model' && !streaming) addActionsToBotMessage(contentWrapper, text);
-            if (sender === 'user') addUserActions(messageWrapper, messageId);
-            
-            if (!streaming) highlightCode(textContentDiv);
-            
-            UIElements.chatMessages.appendChild(messageWrapper);
-            if (!isHistory) scrollToBottom();
-            return messageWrapper;
-        };
-        
-        const addActionsToBotMessage = (container, text) => {
-            let actionsDiv = document.createElement('div');
-            actionsDiv.className = 'message-actions bot-actions flex items-center gap-3 pl-1';
-            container.appendChild(actionsDiv);
+            };
 
-            actionsDiv.innerHTML = `<button class="speak-btn text-stone-400 hover:text-white transition-colors" title="Read aloud"><i class="fas fa-volume-high"></i></button><button class="copy-btn text-stone-400 hover:text-white transition-colors" title="Copy"><i class="fas fa-copy"></i></button>`;
-            
-            const speakBtn = actionsDiv.querySelector('.speak-btn');
-            speakBtn.onclick = () => {
-                const icon = speakBtn.querySelector('i');
-                if (speechSynthesis.speaking) {
-                    isSpeakingCanceled = true; 
-                    speechSynthesis.cancel();
-                    icon.className = 'fas fa-volume-high';
-                } else {
-                    isSpeakingCanceled = false;
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    if (selectedVoice) {
-                        utterance.voice = selectedVoice;
-                    }
-                    utterance.onend = () => {
-                        icon.className = 'fas fa-volume-high';
-                        isSpeakingCanceled = false;
-                    };
-                    utterance.onerror = (e) => {
-                        if (!isSpeakingCanceled) { 
-                            console.error('SpeechSynthesisUtterance error:', e);
-                            showToast("Speech playback failed.", true);
+            const renderChatList = () => {
+                UIElements.chatListContainer.innerHTML = '';
+                chatSessions.sort((a, b) => b.lastUsed - a.lastUsed);
+                chatSessions.forEach(chat => {
+                    const chatItem = document.createElement('div');
+                    chatItem.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
+                    chatItem.innerHTML = `<span class="chat-item-title">${chat.name}</span><button class="chat-item-delete" data-id="${chat.id}"><i class="fas fa-times"></i></button>`;
+                    chatItem.onclick = (e) => {
+                        if (!e.target.closest('.chat-item-delete')) {
+                            switchChat(chat.id);
                         }
-                        icon.className = 'fas fa-volume-high';
-                        isSpeakingCanceled = false;
                     };
-                    speechSynthesis.speak(utterance);
-                    icon.className = 'fas fa-stop-circle';
-                }
+                    chatItem.querySelector('.chat-item-delete').onclick = (e) => {
+                        e.stopPropagation();
+                        deleteChatSession(chat.id);
+                    };
+                    UIElements.chatListContainer.appendChild(chatItem);
+                });
             };
-            
-            const copyBtn = actionsDiv.querySelector('.copy-btn');
-            copyBtn.onclick = () => {
-                const textArea = document.createElement("textarea");
-                textArea.value = text;
-                document.body.appendChild(textArea);
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    showToast('Copied to clipboard!');
-                } catch (err) {
-                    showToast('Failed to copy text.', true);
-                }
-                document.body.removeChild(textArea);
+
+            const setUiLoading = (isLoading) => {
+                UIElements.messageInput.disabled = isLoading;
+                UIElements.sendButton.disabled = isLoading;
+                UIElements.fileUploadInput.disabled = isLoading;
+                UIElements.micButton.disabled = isLoading;
+                UIElements.sendButton.classList.toggle('hidden', isLoading);
+                UIElements.stopButton.classList.toggle('hidden', !isLoading);
             };
-        };
 
-        const addUserActions = (container, messageId) => {
-            let actionsDiv = document.createElement('div');
-            actionsDiv.className = 'message-actions user-actions flex items-center gap-3';
-            container.appendChild(actionsDiv);
-            actionsDiv.innerHTML = `<button class="delete-btn text-stone-400 hover:text-red-500 transition-colors" title="Delete"><i class="fas fa-trash-alt"></i></button>`;
-            actionsDiv.querySelector('.delete-btn').onclick = () => deleteMessage(messageId);
-        };
-        
-        const scrollToBottom = (instant = false) => {
-            UIElements.chatMessages.scrollTo({ top: UIElements.chatMessages.scrollHeight, behavior: instant ? 'auto' : 'smooth' });
-        };
-
-        const handleFileUpload = (event) => {
-            const files = Array.from(event.target.files).slice(0, 5 - uploadedFiles.length);
-            if (files.length === 0) return;
-
-            files.forEach(file => {
-                if(file.size > 10 * 1024 * 1024) {
-                    showToast(`File "${file.name}" is too large (max 10MB).`, true);
+            const sendMessage = async () => {
+                const messageText = UIElements.messageInput.value.trim();
+                if ((messageText === '' && uploadedFiles.length === 0) || UIElements.sendButton.disabled) return;
+                
+                if (!GEMINI_API_KEY) {
+                    showToast("API Key is missing. Please ensure it's set up correctly.", true);
                     return;
                 }
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    uploadedFiles.push({ name: file.name, type: file.type, base64: e.target.result.split(',')[1] });
-                    renderFilePreviews();
-                };
-                reader.onerror = () => showToast(`Failed to read file: ${file.name}`, true);
-                reader.readAsDataURL(file);
-            });
-            event.target.value = '';
-        };
 
-        const toggleRecording = () => {
-            if (mediaRecorder && mediaRecorder.state === "recording") {
-                mediaRecorder.stop();
-                UIElements.micButton.classList.remove("recording");
-                showToast("Voice recording stopped.", false);
-            } else {
-                navigator.mediaDevices.getUserMedia({ audio: true })
-                    .then(stream => {
-                        mediaRecorder = new MediaRecorder(stream);
-                        mediaRecorder.start();
-                        UIElements.micButton.classList.add("recording");
-                        showToast("Recording voice message...", false);
-                        
-                        mediaRecorder.addEventListener("dataavailable", e => audioChunks.push(e.data));
-                        mediaRecorder.addEventListener("stop", () => {
-                            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                            const reader = new FileReader();
-                            reader.onload = (e) => {
-                                uploadedFiles.push({ name: 'voice_message.webm', type: 'audio/webm', base64: e.target.result.split(',')[1] });
-                                renderFilePreviews();
-                                sendMessage();
-                            };
-                            reader.onerror = () => showToast("Failed to read audio file.", true);
-                            reader.readAsDataURL(audioBlob);
-                            audioChunks = [];
-                            stream.getTracks().forEach(track => track.stop());
-                        });
-                    })
-                    .catch(err => {
-                        showToast("Microphone access denied or error: " + err.message, true);
-                    });
-            }
-        };
-        
-        const renderFilePreviews = () => {
-            UIElements.filePreviewArea.innerHTML = '';
-            uploadedFiles.forEach((file, index) => {
-                const preview = document.createElement('div');
-                preview.className = 'file-preview relative p-1 bg-stone-700 rounded-md text-xs flex items-center gap-2';
-                let iconClass = 'fas fa-file-alt';
-                if (file.type.startsWith('image/')) iconClass = 'fas fa-image';
-                else if (file.type.startsWith('audio/')) iconClass = 'fas fa-volume-up';
-                else if (file.type.startsWith('video/')) iconClass = 'fas fa-video';
+                hidePromptStarters();
+                setUiLoading(true);
+                abortController = new AbortController();
+                speechSynthesis.cancel();
 
-                preview.innerHTML = `<i class="${iconClass}"></i><span>${file.name.length > 15 ? file.name.substring(0, 12) + '...' : file.name}</span><button class="absolute -top-1 -right-1 bg-red-500 text-white w-4 h-4 rounded-full text-xs flex items-center justify-center leading-none">&times;</button>`;
+                const userParts = [];
+                if (messageText) userParts.push({ text: messageText });
+                uploadedFiles.forEach(file => userParts.push({ inline_data: { mime_type: file.type, data: file.base64 } }));
+
+                const userMessageForHistory = { role: "user", parts: userParts, id: Date.now() };
+                const userMessageForApi = { role: "user", parts: userParts };
+                appendMessage(userMessageForHistory.role, messageText || `[${uploadedFiles.length} file(s) attached]`, false, userMessageForHistory.id);
                 
-                preview.querySelector('button').onclick = () => {
-                    uploadedFiles.splice(index, 1);
-                    renderFilePreviews();
+                const apiHistory = chatHistory.map(({ role, parts }) => ({ role, parts }));
+                const payload = { 
+                    contents: [systemInstruction, ...apiHistory, userMessageForApi] 
                 };
-                UIElements.filePreviewArea.appendChild(preview);
-            });
-        };
+                
+                UIElements.messageInput.value = '';
+                clearFileUploads();
 
-        const clearFileUploads = () => { uploadedFiles = []; renderFilePreviews(); };
+                let botMessageDiv, fullResponse = '';
+                const botMessageId = Date.now();
+                
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:streamGenerateContent?key=${GEMINI_API_KEY}&alt=sse`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                        signal: abortController.signal
+                    });
 
-        const highlightCode = (container) => {
-            container.querySelectorAll('pre code').forEach(el => {
-                if (el.className.includes('language-')) {
-                    hljs.highlightElement(el);
-                } else {
-                    hljs.highlightElement(el);
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+                    }
+                    
+                    botMessageDiv = appendMessage('model', '', false, botMessageId, true);
+                    const textContentDiv = botMessageDiv.querySelector('.text-content');
+                    
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        const lines = decoder.decode(value, { stream: true }).split('\n');
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const chunk = JSON.parse(line.substring(6));
+                                    const textChunk = chunk.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                                    if (textChunk) {
+                                        fullResponse += textChunk;
+                                        textContentDiv.innerHTML = marked.parse(fullResponse);
+                                        scrollToBottom();
+                                    }
+                                } catch (e) {}
+                            }
+                        }
+                    }
+                } catch (error) {
+                    if (error.name !== 'AbortError') {
+                        fullResponse = `Error: ${error.message}. Please try again.`;
+                        if (botMessageDiv) {
+                            botMessageDiv.querySelector('.text-content').innerHTML = marked.parse(fullResponse);
+                        } else {
+                            appendMessage('model', fullResponse, false, botMessageId);
+                        }
+                        showToast(`AI Error: ${error.message}`, true);
+                    } else {
+                        fullResponse += "\n\n*(Generation stopped by user)*";
+                        if (botMessageDiv) botMessageDiv.querySelector('.text-content').innerHTML = marked.parse(fullResponse);
+                        showToast("AI generation stopped.", false);
+                    }
+                } finally {
+                    chatHistory.push(userMessageForHistory);
+                    if (fullResponse.trim()) {
+                        const botMessage = { role: "model", parts: [{ text: fullResponse }], id: botMessageId };
+                        chatHistory.push(botMessage);
+                        if (botMessageDiv) {
+                            addActionsToBotMessage(botMessageDiv.querySelector('.flex.flex-col'), fullResponse);
+                            highlightCode(botMessageDiv);
+                        }
+                    } else {
+                        botMessageDiv?.remove();
+                    }
+                    saveChatSessions();
+                    setUiLoading(false);
+                    abortController = null;
+                    UIElements.messageInput.focus();
                 }
-            });
-        };
-        
-        const displayPromptStarters = () => {
-            const starters = [
-                { title: "Who are you?", icon: "fa-robot" },
-                { title: "Explain quantum computing", icon: "fa-microchip" },
-                { title: "Plan a trip to Mars", icon: "fa-rocket" },
-                { title: "Compose a short story", icon: "fa-book" }
-            ];
-            UIElements.promptStartersContainer.innerHTML = '';
-            starters.forEach((starter, i) => {
-                const btn = document.createElement('button');
-                btn.className = 'prompt-starter p-3 rounded-lg text-left text-sm bg-stone-800/50 border border-stone-700 hover:border-fuchsia-500 hover:bg-stone-800 transition-all';
-                btn.innerHTML = `<i class="fas ${starter.icon} mr-2 text-fuchsia-400"></i> ${starter.title}`;
-                btn.style.animationDelay = `${i * 100}ms`;
-                btn.onclick = () => {
-                    UIElements.messageInput.value = starter.title;
-                    sendMessage();
-                };
-                UIElements.promptStartersContainer.appendChild(btn);
-            });
-            UIElements.promptStartersContainer.classList.remove('hidden');
-        };
-
-        const hidePromptStarters = () => UIElements.promptStartersContainer.classList.add('hidden');
-        
-        const startThemeAnimation = () => {
-            let hue = 280;
-            setInterval(() => {
-                hue = (hue + 0.5) % 360;
-                document.documentElement.style.setProperty('--primary-color', `hsl(${hue}, 80%, 60%)`);
-                document.documentElement.style.setProperty('--secondary-color', `hsl(${(hue + 60) % 360}, 80%, 60%)`);
-                document.documentElement.style.setProperty('--glow-color', `hsla(${hue}, 80%, 60%, 0.5)`);
-                document.documentElement.style.setProperty('--glow-color-light', `hsla(${hue}, 80%, 60%, 0.25)`);
-
-                UIElements.kelsyTitle.style.backgroundImage = `linear-gradient(45deg, hsl(${hue - 30}, 80%, 60%), hsl(${hue}, 80%, 60%), hsl(${hue + 30}, 80%, 60%))`;
-            }, 50);
-        };
-        
-        const showToast = (message, isError = false) => {
-            UIElements.toastNotification.textContent = message;
-            UIElements.toastNotification.className = `fixed bottom-5 right-5 text-white py-2 px-4 rounded-lg shadow-lg ${isError ? 'bg-red-500' : 'bg-green-500'} show`;
+            };
             
-            setTimeout(() => {
-                UIElements.toastNotification.classList.remove('show');
-            }, 3000);
-        };
-        
-        const exportChat = () => {
-            let chatContent = `# Kelsy AI Chat Export\n\nExported: ${new Date().toLocaleString()}\n\n---\n\n`;
-            chatHistory.forEach(msg => {
-                const messageParts = msg.parts.map(part => {
-                    if (part.text) return part.text;
-                    if (part.inline_data) return `[Attached File: ${part.inline_data.mime_type}]`;
-                    return '';
-                }).join('\n');
-                chatContent += `**[${msg.role === 'user' ? 'User' : 'Kelsy'}]**\n\n${messageParts}\n\n---\n\n`;
-            });
-            const blob = new Blob([chatContent], { type: 'text/markdown;charset=utf-8' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `kelsy-chat-${Date.now()}.md`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(a.href);
-            showToast("Chat exported successfully!");
-        };
+            const appendMessage = (sender, text, isHistory = false, messageId, streaming = false) => {
+                const messageWrapper = document.createElement('div');
+                messageWrapper.className = `message ${sender === 'user' ? 'user' : 'bot'} flex items-start gap-3 max-w-2xl ${sender === 'user' ? 'self-end flex-row-reverse' : 'self-start'}`;
+                messageWrapper.dataset.id = messageId;
+                
+                const avatar = `<div class="avatar w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0"><i class="fas ${sender === 'user' ? 'fa-user-astronaut' : 'fa-robot'}"></i></div>`;
+                
+                const contentWrapper = document.createElement('div');
+                contentWrapper.className = 'flex flex-col gap-2 items-start w-full';
+                
+                const textContentDiv = document.createElement('div');
+                textContentDiv.className = `text-content p-4 rounded-2xl ${sender === 'user' ? 'rounded-br-none' : 'rounded-bl-none'}`;
+                
+                textContentDiv.innerHTML = streaming ? '<div class="flex items-center gap-1.5"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>' : marked.parse(text);
+                
+                contentWrapper.appendChild(textContentDiv);
+                messageWrapper.innerHTML = avatar;
+                messageWrapper.appendChild(contentWrapper);
+                
+                if (sender === 'model' && !streaming) addActionsToBotMessage(contentWrapper, text);
+                if (sender === 'user') addUserActions(messageWrapper, messageId);
+                
+                if (!streaming) highlightCode(textContentDiv);
+                
+                UIElements.chatMessages.appendChild(messageWrapper);
+                if (!isHistory) scrollToBottom();
+                return messageWrapper;
+            };
+            
+            const addActionsToBotMessage = (container, text) => {
+                let actionsDiv = document.createElement('div');
+                actionsDiv.className = 'message-actions bot-actions flex items-center gap-3 pl-1';
+                container.appendChild(actionsDiv);
 
-        const populateVoiceList = () => {
-            const voices = speechSynthesis.getVoices();
-            UIElements.voiceSelect.innerHTML = '<option value="">Default Voice</option>';
-            const preferredLangs = [
-                'en-US', 'en-GB', 'en-AU', 'en-CA', 'en-IN',
-                'sr-RS', 'sr-Latn-RS'
-            ];
+                actionsDiv.innerHTML = `<button class="speak-btn text-stone-400 hover:text-white transition-colors" title="Read aloud"><i class="fas fa-volume-high"></i></button><button class="copy-btn text-stone-400 hover:text-white transition-colors" title="Copy"><i class="fas fa-copy"></i></button>`;
+                
+                const speakBtn = actionsDiv.querySelector('.speak-btn');
+                speakBtn.onclick = () => {
+                    const icon = speakBtn.querySelector('i');
+                    if (speechSynthesis.speaking) {
+                        isSpeakingCanceled = true; 
+                        speechSynthesis.cancel();
+                        icon.className = 'fas fa-volume-high';
+                    } else {
+                        isSpeakingCanceled = false;
+                        const utterance = new SpeechSynthesisUtterance(text);
+                        if (selectedVoice) {
+                            utterance.voice = selectedVoice;
+                        }
+                        utterance.onend = () => {
+                            icon.className = 'fas fa-volume-high';
+                            isSpeakingCanceled = false;
+                        };
+                        utterance.onerror = (e) => {
+                            if (!isSpeakingCanceled) { 
+                                console.error('SpeechSynthesisUtterance error:', e);
+                                showToast("Speech playback failed.", true);
+                            }
+                            icon.className = 'fas fa-volume-high';
+                            isSpeakingCanceled = false;
+                        };
+                        speechSynthesis.speak(utterance);
+                        icon.className = 'fas fa-stop-circle';
+                    }
+                };
+                
+                const copyBtn = actionsDiv.querySelector('.copy-btn');
+                copyBtn.onclick = () => {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                        showToast('Copied to clipboard!');
+                    } catch (err) {
+                        showToast('Failed to copy text.', true);
+                    }
+                    document.body.removeChild(textArea);
+                };
+            };
 
-            const addedVoiceNames = new Set();
+            const addUserActions = (container, messageId) => {
+                let actionsDiv = document.createElement('div');
+                actionsDiv.className = 'message-actions user-actions flex items-center gap-3';
+                container.appendChild(actionsDiv);
+                actionsDiv.innerHTML = `<button class="delete-btn text-stone-400 hover:text-red-500 transition-colors" title="Delete"><i class="fas fa-trash-alt"></i></button>`;
+                actionsDiv.querySelector('.delete-btn').onclick = () => deleteMessage(messageId);
+            };
+            
+            const scrollToBottom = (instant = false) => {
+                UIElements.chatMessages.scrollTo({ top: UIElements.chatMessages.scrollHeight, behavior: instant ? 'auto' : 'smooth' });
+            };
 
-            preferredLangs.forEach(langCode => {
-                voices.filter(voice => voice.lang === langCode).forEach(voice => {
-                    if (!addedVoiceNames.has(voice.name)) {
-                        const option = document.createElement('option');
-                        option.textContent = `${voice.name} (${voice.lang})`;
-                        option.value = voice.name;
-                        UIElements.voiceSelect.appendChild(option);
-                        addedVoiceNames.add(voice.name);
+            const handleFileUpload = (event) => {
+                const files = Array.from(event.target.files).slice(0, 5 - uploadedFiles.length);
+                if (files.length === 0) return;
+
+                files.forEach(file => {
+                    if(file.size > 10 * 1024 * 1024) {
+                        showToast(`File "${file.name}" is too large (max 10MB).`, true);
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        uploadedFiles.push({ name: file.name, type: file.type, base64: e.target.result.split(',')[1] });
+                        renderFilePreviews();
+                    };
+                    reader.onerror = () => showToast(`Failed to read file: ${file.name}`, true);
+                    reader.readAsDataURL(file);
+                });
+                event.target.value = '';
+            };
+
+            const toggleRecording = () => {
+                if (mediaRecorder && mediaRecorder.state === "recording") {
+                    mediaRecorder.stop();
+                    UIElements.micButton.classList.remove("recording");
+                    showToast("Voice recording stopped.", false);
+                } else {
+                    navigator.mediaDevices.getUserMedia({ audio: true })
+                        .then(stream => {
+                            mediaRecorder = new MediaRecorder(stream);
+                            mediaRecorder.start();
+                            UIElements.micButton.classList.add("recording");
+                            showToast("Recording voice message...", false);
+                            
+                            mediaRecorder.addEventListener("dataavailable", e => audioChunks.push(e.data));
+                            mediaRecorder.addEventListener("stop", () => {
+                                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                                const reader = new FileReader();
+                                reader.onload = (e) => {
+                                    uploadedFiles.push({ name: 'voice_message.webm', type: 'audio/webm', base64: e.target.result.split(',')[1] });
+                                    renderFilePreviews();
+                                    sendMessage();
+                                };
+                                reader.onerror = () => showToast("Failed to read audio file.", true);
+                                reader.readAsDataURL(audioBlob);
+                                audioChunks = [];
+                                stream.getTracks().forEach(track => track.stop());
+                            });
+                        })
+                        .catch(err => {
+                            showToast("Microphone access denied or error: " + err.message, true);
+                        });
+                }
+            };
+            
+            const renderFilePreviews = () => {
+                UIElements.filePreviewArea.innerHTML = '';
+                uploadedFiles.forEach((file, index) => {
+                    const preview = document.createElement('div');
+                    preview.className = 'file-preview relative p-1 bg-stone-700 rounded-md text-xs flex items-center gap-2';
+                    let iconClass = 'fas fa-file-alt';
+                    if (file.type.startsWith('image/')) iconClass = 'fas fa-image';
+                    else if (file.type.startsWith('audio/')) iconClass = 'fas fa-volume-up';
+                    else if (file.type.startsWith('video/')) iconClass = 'fas fa-video';
+
+                    preview.innerHTML = `<i class="${iconClass}"></i><span>${file.name.length > 15 ? file.name.substring(0, 12) + '...' : file.name}</span><button class="absolute -top-1 -right-1 bg-red-500 text-white w-4 h-4 rounded-full text-xs flex items-center justify-center leading-none">&times;</button>`;
+                    
+                    preview.querySelector('button').onclick = () => {
+                        uploadedFiles.splice(index, 1);
+                        renderFilePreviews();
+                    };
+                    UIElements.filePreviewArea.appendChild(preview);
+                });
+            };
+
+            const clearFileUploads = () => { uploadedFiles = []; renderFilePreviews(); };
+
+            const highlightCode = (container) => {
+                container.querySelectorAll('pre code').forEach(el => {
+                    if (el.className.includes('language-')) {
+                        hljs.highlightElement(el);
+                    } else {
+                        hljs.highlightElement(el);
                     }
                 });
-            });
-
-            voices.filter(voice => voice.lang.startsWith('en-') && !addedVoiceNames.has(voice.name)).forEach(voice => {
-                const option = document.createElement('option');
-                option.textContent = `${voice.name} (${voice.lang})`;
-                option.value = voice.name;
-                UIElements.voiceSelect.appendChild(option);
-                addedVoiceNames.add(voice.name);
-            });
-
-            const savedVoiceName = localStorage.getItem('kelsy_selected_voice');
-            if (savedVoiceName) {
-                const voiceToSelect = voices.find(v => v.name === savedVoiceName);
-                if (voiceToSelect) {
-                    selectedVoice = voiceToSelect;
-                    UIElements.voiceSelect.value = savedVoiceName;
-                } else {
-                    showToast(`Saved voice "${savedVoiceName}" not found. Using default.`, true);
-                    localStorage.removeItem('kelsy_selected_voice');
-                }
-            }
-        };
-
-        UIElements.sendButton.addEventListener('click', sendMessage);
-        UIElements.stopButton.addEventListener('click', () => {
-            if (abortController) {
-                abortController.abort();
-            }
-        });
-        UIElements.micButton.addEventListener('click', toggleRecording);
-        UIElements.messageInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-        UIElements.fileUploadInput.addEventListener('change', handleFileUpload);
-        UIElements.menuButton.addEventListener('click', () => UIElements.menuModal.style.display = 'flex');
-        UIElements.closeMenuButton.addEventListener('click', () => UIElements.menuModal.style.display = 'none');
-        UIElements.newChatButton.addEventListener('click', startNewChat);
-        UIElements.exportChatButton.addEventListener('click', exportChat);
-        UIElements.voiceSelect.addEventListener('change', (event) => {
-            const voiceName = event.target.value;
-            selectedVoice = speechSynthesis.getVoices().find(voice => voice.name === voiceName) || null;
-            localStorage.setItem('kelsy_selected_voice', voiceName);
-            showToast(voiceName ? `Voice set to ${voiceName}` : "Default voice selected.");
-        });
-        
-        window.addEventListener('load', () => {
-            if (window.innerWidth < 640) {
-                UIElements.mobileBlockOverlay.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-                document.querySelector('.chat-container').style.display = 'none';
-            } else {
-                UIElements.mobileBlockOverlay.style.display = 'none';
-                document.querySelector('.chat-container').style.display = 'flex';
-                loadChatSessions();
-                startThemeAnimation();
-                particlesJS('particles-js', {
-                    "particles": {
-                        "number": { "value": 60, "density": { "enable": true, "value_area": 800 } },
-                        "color": { "value": "#ffffff" },
-                        "shape": { "type": "circle" },
-                        "opacity": { "value": 0.3, "random": true },
-                        "size": { "value": 3, "random": true },
-                        "line_linked": { "enable": true, "distance": 150, "color": "#ffffff", "opacity": 0.2, "width": 1 },
-                        "move": { "enable": true, "speed": 1, "direction": "none", "random": true, "straight": false, "out_mode": "out" }
-                    },
-                    "interactivity": {
-                        "detect_on": "canvas",
-                        "events": { "onhover": { "enable": true, "mode": "grab" }, "onclick": { "enable": true, "mode": "push" } },
-                        "modes": { "grab": { "distance": 140, "line_linked": { "opacity": 0.5 } }, "push": { "particles_nb": 4 } }
-                    },
-                    "retina_detect": true
+            };
+            
+            const displayPromptStarters = () => {
+                const starters = [
+                    { title: "Who are you?", icon: "fa-robot" },
+                    { title: "Explain quantum computing", icon: "fa-microchip" },
+                    { title: "Plan a trip to Mars", icon: "fa-rocket" },
+                    { title: "Compose a short story", icon: "fa-book" }
+                ];
+                UIElements.promptStartersContainer.innerHTML = '';
+                starters.forEach((starter, i) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'prompt-starter p-3 rounded-lg text-left text-sm bg-stone-800/50 border border-stone-700 hover:border-fuchsia-500 hover:bg-stone-800 transition-all';
+                    btn.innerHTML = `<i class="fas ${starter.icon} mr-2 text-fuchsia-400"></i> ${starter.title}`;
+                    btn.style.animationDelay = `${i * 100}ms`;
+                    btn.onclick = () => {
+                        UIElements.messageInput.value = starter.title;
+                        sendMessage();
+                    };
+                    UIElements.promptStartersContainer.appendChild(btn);
                 });
-                populateVoiceList();
-                if (speechSynthesis.onvoiceschanged !== undefined) {
-                    speechSynthesis.onvoiceschanged = populateVoiceList;
-                }
-            }
-        });
+                UIElements.promptStartersContainer.classList.remove('hidden');
+            };
 
-        hljs.configure({ ignoreUnescapedHTML: true });
+            const hidePromptStarters = () => UIElements.promptStartersContainer.classList.add('hidden');
+            
+            const startThemeAnimation = () => {
+                let hue = 280;
+                setInterval(() => {
+                    hue = (hue + 0.5) % 360;
+                    document.documentElement.style.setProperty('--primary-color', `hsl(${hue}, 80%, 60%)`);
+                    document.documentElement.style.setProperty('--secondary-color', `hsl(${(hue + 60) % 360}, 80%, 60%)`);
+                    document.documentElement.style.setProperty('--glow-color', `hsla(${hue}, 80%, 60%, 0.5)`);
+                    document.documentElement.style.setProperty('--glow-color-light', `hsla(${hue}, 80%, 60%, 0.25)`);
+
+                    UIElements.kelsyTitle.style.backgroundImage = `linear-gradient(45deg, hsl(${hue - 30}, 80%, 60%), hsl(${hue}, 80%, 60%), hsl(${hue + 30}, 80%, 60%))`;
+                }, 50);
+            };
+            
+            const showToast = (message, isError = false) => {
+                UIElements.toastNotification.textContent = message;
+                UIElements.toastNotification.className = `fixed bottom-5 right-5 text-white py-2 px-4 rounded-lg shadow-lg ${isError ? 'bg-red-500' : 'bg-green-500'} show`;
+                
+                setTimeout(() => {
+                    UIElements.toastNotification.classList.remove('show');
+                }, 3000);
+            };
+            
+            const exportChat = () => {
+                let chatContent = `# Kelsy AI Chat Export\n\nExported: ${new Date().toLocaleString()}\n\n---\n\n`;
+                chatHistory.forEach(msg => {
+                    const messageParts = msg.parts.map(part => {
+                        if (part.text) return part.text;
+                        if (part.inline_data) return `[Attached File: ${part.inline_data.mime_type}]`;
+                        return '';
+                    }).join('\n');
+                    chatContent += `**[${msg.role === 'user' ? 'User' : 'Kelsy'}]**\n\n${messageParts}\n\n---\n\n`;
+                });
+                const blob = new Blob([chatContent], { type: 'text/markdown;charset=utf-8' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `kelsy-chat-${Date.now()}.md`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(a.href);
+                showToast("Chat exported successfully!");
+            };
+
+            const populateVoiceList = () => {
+                const voices = speechSynthesis.getVoices();
+                UIElements.voiceSelect.innerHTML = '<option value="">Default Voice</option>';
+                const preferredLangs = [
+                    'en-US', 'en-GB', 'en-AU', 'en-CA', 'en-IN',
+                    'sr-RS', 'sr-Latn-RS'
+                ];
+
+                const addedVoiceNames = new Set();
+
+                preferredLangs.forEach(langCode => {
+                    voices.filter(voice => voice.lang === langCode).forEach(voice => {
+                        if (!addedVoiceNames.has(voice.name)) {
+                            const option = document.createElement('option');
+                            option.textContent = `${voice.name} (${voice.lang})`;
+                            option.value = voice.name;
+                            UIElements.voiceSelect.appendChild(option);
+                            addedVoiceNames.add(voice.name);
+                        }
+                    });
+                });
+
+                voices.filter(voice => voice.lang.startsWith('en-') && !addedVoiceNames.has(voice.name)).forEach(voice => {
+                    const option = document.createElement('option');
+                    option.textContent = `${voice.name} (${voice.lang})`;
+                    option.value = voice.name;
+                    UIElements.voiceSelect.appendChild(option);
+                    addedVoiceNames.add(voice.name);
+                });
+
+                const savedVoiceName = localStorage.getItem('kelsy_selected_voice');
+                if (savedVoiceName) {
+                    const voiceToSelect = voices.find(v => v.name === savedVoiceName);
+                    if (voiceToSelect) {
+                        selectedVoice = voiceToSelect;
+                        UIElements.voiceSelect.value = savedVoiceName;
+                    } else {
+                        showToast(`Saved voice "${savedVoiceName}" not found. Using default.`, true);
+                        localStorage.removeItem('kelsy_selected_voice');
+                    }
+                }
+            };
+
+            UIElements.sendButton.addEventListener('click', sendMessage);
+            UIElements.stopButton.addEventListener('click', () => {
+                if (abortController) {
+                    abortController.abort();
+                }
+            });
+            UIElements.micButton.addEventListener('click', toggleRecording);
+            UIElements.messageInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            UIElements.fileUploadInput.addEventListener('change', handleFileUpload);
+            UIElements.menuButton.addEventListener('click', () => UIElements.menuModal.style.display = 'flex');
+            UIElements.closeMenuButton.addEventListener('click', () => UIElements.menuModal.style.display = 'none');
+            UIElements.newChatButton.addEventListener('click', startNewChat);
+            UIElements.exportChatButton.addEventListener('click', exportChat);
+            UIElements.voiceSelect.addEventListener('change', (event) => {
+                const voiceName = event.target.value;
+                selectedVoice = speechSynthesis.getVoices().find(voice => voice.name === voiceName) || null;
+                localStorage.setItem('kelsy_selected_voice', voiceName);
+                showToast(voiceName ? `Voice set to ${voiceName}` : "Default voice selected.");
+            });
+            
+            window.addEventListener('load', () => {
+                if (window.innerWidth < 640) {
+                    UIElements.mobileBlockOverlay.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                    document.querySelector('.chat-container').style.display = 'none';
+                } else {
+                    UIElements.mobileBlockOverlay.style.display = 'none';
+                    document.querySelector('.chat-container').style.display = 'flex';
+                    loadChatSessions();
+                    startThemeAnimation();
+                    particlesJS('particles-js', {
+                        "particles": {
+                            "number": { "value": 60, "density": { "enable": true, "value_area": 800 } },
+                            "color": { "value": "#ffffff" },
+                            "shape": { "type": "circle" },
+                            "opacity": { "value": 0.3, "random": true },
+                            "size": { "value": 3, "random": true },
+                            "line_linked": { "enable": true, "distance": 150, "color": "#ffffff", "opacity": 0.2, "width": 1 },
+                            "move": { "enable": true, "speed": 1, "direction": "none", "random": true, "straight": false, "out_mode": "out" }
+                        },
+                        "interactivity": {
+                            "detect_on": "canvas",
+                            "events": { "onhover": { "enable": true, "mode": "grab" }, "onclick": { "enable": true, "mode": "push" } },
+                            "modes": { "grab": { "distance": 140, "line_linked": { "opacity": 0.5 } }, "push": { "particles_nb": 4 } }
+                        },
+                        "retina_detect": true
+                    });
+                    populateVoiceList();
+                    if (speechSynthesis.onvoiceschanged !== undefined) {
+                        speechSynthesis.onvoiceschanged = populateVoiceList;
+                    }
+                }
+            });
+
+            hljs.configure({ ignoreUnescapedHTML: true });
+        })();
     </script>
 </body>
 </html>
